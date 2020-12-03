@@ -1,3 +1,8 @@
+/*******************************************************************//*
+Author: Gabriel Hofer
+Date: December 7, 2020
+Course: CSC-410
+*//*******************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>	// To use the sqrt function
@@ -23,7 +28,6 @@ void kNN(int myproc, int nprocs, int data_size, plant pl){
   printf("pl: %d %d %d %d\n\n", pl.attr[0], pl.attr[1], pl.attr[2], pl.attr[3]);
 }
 
-
 int main(int argc, char ** argv){
   /*******************************************************************/
   /* 1. Initialization */
@@ -36,7 +40,7 @@ int main(int argc, char ** argv){
   MPI_Status status;
 
 	char *buf = NULL; 
-  size_t leng; float a, b, c, d; char ch;
+  size_t leng; float a, b, c, d; char ch; char e[20];
   plant coll[100];
   int plant_idx=0;
 
@@ -46,12 +50,13 @@ int main(int argc, char ** argv){
   if(myproc==0){
     FILE *fp = fopen(argv[1],"r");
   	while(getline(&buf, &leng, fp)>0){
-  		sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
-  		printf("%f %f %f %f\n", a, b, c, d);
+  		sscanf(buf, "%f %[,] %f %[,] %f %[,] %f %[,] %s", &a, &ch, &b, &ch, &c, &ch, &d, &ch, e);
+  		printf("%f %f %f %f %s\n", a, b, c, d, e);
       coll[plant_idx].attr[0]=a;
       coll[plant_idx].attr[1]=b;
       coll[plant_idx].attr[2]=c;
       coll[plant_idx].attr[3]=d;
+      strcpy(coll[plant_idx].class,e);
       plant_idx++;
       //collection[plant_idx].class=____;
   	}
@@ -90,29 +95,20 @@ int main(int argc, char ** argv){
   /*******************************************************************/
   /* 5. send plant class to all procs with rank greater than 0 */ 
   /*******************************************************************/
-/*
   char class[20];
   if(myproc==0){
-    for(int i=0;i<plant_idx;i++){
-      MPI_Isend(&coll[i].class, 20, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
+    for(int i=1;i<nprocs;i++){
+      MPI_Isend(&coll[i-1].class, 20, MPI_CHAR, i, 0, MPI_COMM_WORLD, &request[i]);
     }
   } else {
-    MPI_Irecv(&attributes, 20, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
-    printf("\t\tdata_size: %d\n", data_size);
+    MPI_Irecv(&class, 20, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &request[0]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-*/
 
-
-
-
+/*
   plant pl;
-
-  
-  if(myproc>0){
-    kNN(myproc, nprocs, data_size, pl);
-  }
-
+  if(myproc>0) kNN(myproc, nprocs, data_size, pl);
+*/
 
 
   MPI_Finalize();
