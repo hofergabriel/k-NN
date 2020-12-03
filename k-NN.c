@@ -4,7 +4,7 @@
 #include <string.h>	// To use the memcpy function
 // #include <time.h>	// To seed the randomizer
 
-//#include <mpi.h>	// Main parallel library
+#include <mpi.h>	// Main parallel library
 #include <unistd.h>	// Needed for gethostname and sleep
 
 typedef struct {
@@ -18,29 +18,38 @@ float dist(plant a, plant b){
 
 int main(int argc, char ** argv){
 
-	char *buf = NULL;
-	size_t len;
-	float a, b, c, d;
-	char ch;
-	FILE *fp = fopen(argv[1],"r");
-	while(getline(&buf, &len, fp)>0){
-		getline(&buf, &len, fp);
-		sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
-		printf("%f %f %f %f\n", a, b, c, d);
-	}
+
+  /******************************************************/
+  int    myproc, nprocs, len;
+  MPI_Init(&argc, &argv);
+
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
 
 
 
+  printf("hellw\n");
+  if(myproc==0){
+    printf("proc 0 a\n");
+  	char *buf = NULL;
+  	size_t leng;
+  	float a, b, c, d;
+  	char ch;
+
+    FILE *fp = fopen(argv[1],"r");
+  	while(getline(&buf, &leng, fp)>0){
+  		getline(&buf, &leng, fp);
+  		sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
+  		printf("%f %f %f %f\n", a, b, c, d);
+  	}
+  }
+
+  printf("rank: %d\n", myproc);
 
 
 
-
-
-
+  MPI_Finalize();
 }
-
-
-
 
 
 
