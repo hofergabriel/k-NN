@@ -12,23 +12,28 @@ typedef struct {
 	char class[20];
 } plant;
 
+/*******************************************************************/
 float dist(plant a, plant b){
 	return (float)1.0;
 }
 
-void kNN(int myproc, int nprocs, int data_size){
+/*******************************************************************/
+void kNN(int myproc, int nprocs, int data_size, plant pl){
   printf("myproc: %d nprocs: %d data_size: %d\n", myproc, nprocs, data_size);
+  printf("pl: %d %d %d %d\n\n", pl.attr[0], pl.attr[1], pl.attr[2], pl.attr[3]);
 }
 
 
 int main(int argc, char ** argv){
   /*******************************************************************/
-  /* Initialization */
+  /* 1. Initialization */
   /*******************************************************************/
   int myproc, nprocs, len;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
+  MPI_Request request[100];
+  MPI_Status status;
 
 	char *buf = NULL; 
   size_t leng; float a, b, c, d; char ch;
@@ -36,7 +41,7 @@ int main(int argc, char ** argv){
   int plant_idx=0;
 
   /*******************************************************************/
-  /* read data input */
+  /* 2. read data input */
   /*******************************************************************/
   if(myproc==0){
     FILE *fp = fopen(argv[1],"r");
@@ -48,34 +53,64 @@ int main(int argc, char ** argv){
       coll[plant_idx].attr[2]=c;
       coll[plant_idx].attr[3]=d;
       plant_idx++;
-      printf("plant_idx: %d\n",plant_idx);
       //collection[plant_idx].class=____;
   	}
+    printf("plant idx: %d\n", plant_idx);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   /*******************************************************************/
-  /* 1. send data_size to all procs with rank greater than 0 */
+  /* 3. send data_size to all procs with rank greater than 0 */
   /*******************************************************************/
   int data_size;
-  MPI_Request request[100];
-  MPI_Status status;
   if(myproc==0){
     for(int i=1;i<nprocs;i++){
       MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
-      MPI_Wait(&request[i], &status);
     }
   } else {
     MPI_Irecv(&data_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
-    MPI_Wait(&request[0], &status);
     printf("\t\tdata_size: %d\n", data_size);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
-  /* */
+  /* 4. send plant attributes to all procs with rank greater than 0 */ 
   /*******************************************************************/
+  int attr[4];
+  if(myproc==0){
+    for(int i=1;i<nprocs;i++){
+      printf("coll[i]: %d %d %d %d\n", coll[i-1].attr[0], coll[i-1].attr[1], coll[i-1].attr[2], coll[i-1].attr[3]);
+      MPI_Isend(&coll[i-1].attr, 4, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
+    }
+  } else {
+    MPI_Irecv(&attr, 4, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
+    printf("\t\tattributes: %d %d %d %d\n", attr[0], attr[1], attr[2], attr[3] );
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  /*******************************************************************/
+  /* 5. send plant class to all procs with rank greater than 0 */ 
+  /*******************************************************************/
+/*
+  char class[20];
+  if(myproc==0){
+    for(int i=0;i<plant_idx;i++){
+      MPI_Isend(&coll[i].class, 20, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
+    }
+  } else {
+    MPI_Irecv(&attributes, 20, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
+    printf("\t\tdata_size: %d\n", data_size);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+*/
+
+
+
+
+  plant pl;
+
+  
   if(myproc>0){
-    kNN(myproc, nprocs, plant_idx);
+    kNN(myproc, nprocs, data_size, pl);
   }
 
 
