@@ -41,6 +41,8 @@ int main(int argc, char ** argv){
   size_t leng; float a, b, c, d; char ch; char e[20];
   plant data[100];
   int plant_idx=0;
+  int data_size;
+  int query_size;
 
   /*******************************************************************/
   /* 2. read data input */
@@ -57,6 +59,7 @@ int main(int argc, char ** argv){
       strcpy(data[plant_idx].class,e);
       plant_idx++;
     }
+    data_size=plant_idx;
     fclose(fp);
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -93,6 +96,7 @@ int main(int argc, char ** argv){
       query[plant_idx].attr[2]=c; query[plant_idx].attr[3]=d;
       plant_idx++;
     }
+    query_size=plant_idx; // unique for query_size 
     fclose(fp2);
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -100,10 +104,8 @@ int main(int argc, char ** argv){
   /*******************************************************************/
   /* 7. send data_size to all procs with rank greater than 0 */
   /*******************************************************************/
-  int query_size;
   if(myproc==0){
     for(int i=1;i<nprocs;i++){ MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]); }
-    query_size=plant_idx; // unique for query_size 
   } else { MPI_Irecv(&query_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]); }
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -125,13 +127,46 @@ int main(int argc, char ** argv){
       printf("\t\tproc: %d qattr: %f %f %f %f\n", myproc, qattr[0], qattr[1], qattr[2], qattr[3] );
     }
     MPI_Barrier(MPI_COMM_WORLD);
+
+    /*******************************************************************//*
+      For the current query:
+    *//*******************************************************************/
+    float manhattan=-1;
+    if(myproc>0) {
+      manhattan=dist(attr, qattr);
+      printf("proc: %d manhattan: %f\n", myproc, manhattan);
+    }
+  
+    /*******************************************************************//*
+      Send man. dist. back to the root process 
+    *//*******************************************************************/
+    float man_proc[2];
+    man_proc[0]=manhattan;
+    man_proc[1]=(float)myproc;
+  
+    float arr[100][2];
+    if(myproc==0){ 
+      for(int i=1;i<nprocs;i++){ 
+        MPI_Irecv(&arr[i-1], 2, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]); 
+      }
+    } else { 
+      MPI_Isend(&man_proc, 2, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]); 
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    
+    /*******************************************************************//*
+      Sort all of the distances
+    *//*******************************************************************/
+    for(int i=0;i<data_size;i++){
+      printf("man: %f myproc: %f\n", arr[i][0], arr[i][1]);
+    }
+
   }
 
-  float manhattan=-1;
-  if(myproc>0) {
-    manhattan=dist(attr, qattr);
-    printf("proc: %d manhattan: %f\n", myproc, manhattan);
-  }
+
+
+
   MPI_Finalize();
 }
 
