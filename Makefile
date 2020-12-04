@@ -1,6 +1,6 @@
 default: 
 	mpicc k-NN.c -o k-NN -lm 
-	mpirun -np 3 ./k-NN data
+	mpirun -np 3 ./k-NN data queries
 
 clean:
 	rm k-NN
