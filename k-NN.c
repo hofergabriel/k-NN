@@ -18,11 +18,8 @@ typedef struct {
 } plant;
 
 /*******************************************************************//*
-@param myproc - id of current process
-@param nprocs - number of processes
-@param data_size - number of fields in data file
-@param d - plant from data
-@param q - plant from queries
+@param d - plant attributes from data
+@param q - attributes from query
 @return - probably return a plant 
 *//*******************************************************************/
 float dist(float d[], float q[]){
@@ -65,47 +62,21 @@ int main(int argc, char ** argv){
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
-  /* 3. send data_size to all procs with rank greater than 0 */
-  /*******************************************************************/
-/*
-  int data_size;
-  if(myproc==0){
-    for(int i=1;i<nprocs;i++){
-      MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
-    }
-  } else {
-    MPI_Irecv(&data_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
-    //printf("\t\tdata_size: %d\n", data_size);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-*/
-  /*******************************************************************/
   /* 4. send plant attributes to all procs with rank greater than 0 */ 
   /*******************************************************************/
   float attr[4];
-  if(myproc==0){
-    for(int i=1;i<nprocs;i++){
-      //printf("data[i]: %f %f %f %f\n", data[i-1].attr[0], data[i-1].attr[1], data[i-1].attr[2], data[i-1].attr[3]);
-      MPI_Isend(&data[i-1].attr, 4, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]);
-    }
-  } else {
-    MPI_Irecv(&attr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]);
-    MPI_Wait(&request[0], &status);
-    printf("\t\tattributes: %f %f %f %f\n", attr[0], attr[1], attr[2], attr[3] );
-  }
+  if(myproc==0){ 
+    for(int i=1;i<nprocs;i++){ MPI_Isend(&data[i-1].attr, 4, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]); }
+  } else { MPI_Irecv(&attr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]); }
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
   /* 5. send plant class to all procs with rank greater than 0 */ 
   /*******************************************************************/
   char class[20];
-  if(myproc==0){
-    for(int i=1;i<nprocs;i++){
-      MPI_Isend(&data[i-1].class, 20, MPI_CHAR, i, 0, MPI_COMM_WORLD, &request[i]);
-    }
-  } else {
-    MPI_Irecv(&class, 20, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &request[0]);
-  }
+  if(myproc==0){ 
+    for(int i=1;i<nprocs;i++){ MPI_Isend(&data[i-1].class, 20, MPI_CHAR, i, 0, MPI_COMM_WORLD, &request[i]); }
+  } else { MPI_Irecv(&class, 20, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &request[0]); }
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************//*
@@ -118,10 +89,8 @@ int main(int argc, char ** argv){
     while(getline(&buf, &leng, fp2)>1){
       sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
       //printf("%f %f %f %f\n", a, b, c, d);
-      query[plant_idx].attr[0]=a;
-      query[plant_idx].attr[1]=b;
-      query[plant_idx].attr[2]=c;
-      query[plant_idx].attr[3]=d;
+      query[plant_idx].attr[0]=a; query[plant_idx].attr[1]=b;
+      query[plant_idx].attr[2]=c; query[plant_idx].attr[3]=d;
       plant_idx++;
     }
     fclose(fp2);
@@ -133,13 +102,9 @@ int main(int argc, char ** argv){
   /*******************************************************************/
   int query_size;
   if(myproc==0){
-    for(int i=1;i<nprocs;i++){
-      MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
-    }
+    for(int i=1;i<nprocs;i++){ MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]); }
     query_size=plant_idx; // unique for query_size 
-  } else {
-    MPI_Irecv(&query_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
-  }
+  } else { MPI_Irecv(&query_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]); }
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
