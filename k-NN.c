@@ -2,15 +2,16 @@
 Author: Gabriel Hofer
 Date: December 7, 2020
 Course: CSC-410
+
+What is the difference between MPI_Barrier and MPI_Wait?
+
 *//*******************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>	// To use the sqrt function
-#include <string.h>	// To use the memcpy function
-// #include <time.h>	// To seed the randomizer
-
-#include <mpi.h>	// Main parallel library
-#include <unistd.h>	// Needed for gethostname and sleep
+#include <math.h>	
+#include <string.h>	
+#include <mpi.h>	
+#include <unistd.h>	
 
 typedef struct {
   float attr[4]; // sepal_l, sepal_w, petal_l, petal_w;
@@ -122,26 +123,49 @@ int main(int argc, char ** argv){
     }
     fclose(fp2);
   }
-  
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  /*******************************************************************/
+  /* 3. send data_size to all procs with rank greater than 0 */
+  /*******************************************************************/
+  int query_size;
+  if(myproc==0){
+    for(int i=1;i<nprocs;i++){
+      MPI_Isend(&plant_idx, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request[i]);
+    }
+    query_size=plant_idx; // unique for query_size 
+  } else {
+    MPI_Irecv(&query_size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &request[0]);
+    printf("\t\tquery_size: %d\n", query_size);
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
   /* 3. send query attr to all procs with rank greater than 0 */
   /*******************************************************************/
   float qattr[4];
-  if(myproc==0){
-    for(int i=1;i<nprocs;i++){
-      printf("\t\t2coll[i]: %f %f %f %f\n", coll[i-1].attr[0], coll[i-1].attr[1], coll[i-1].attr[2], coll[i-1].attr[3]);
-      MPI_Isend(&coll[i-1].attr, 4, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]);
+  printf("1 --> proc num: %d\n",myproc);
+  // problem is that plant index is different  --> need to send query file size like data_size !!!!
+  for(int j=0;j<query_size;j++){
+    printf("2 --> proc num: %d\n",myproc);
+    if(myproc==0){
+      for(int i=1;i<nprocs;i++){
+        printf("\t\tsend to: %d 2coll[i]: %f %f %f %f\n", i, coll[j].attr[0], coll[j].attr[1], coll[j].attr[2], coll[j].attr[3]);
+        MPI_Isend(&coll[j].attr, 4, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]);
+        //MPI_Wait(&request[i], &status);
+        printf("after sending\n");
+      }
+    } else {
+      printf("receive from 0\n");
+      MPI_Irecv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[nprocs+myproc]);
+      printf("\t\t\t\tok ok\n");
+      //MPI_Recv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+      //MPI_Wait(&request[nprocs+myproc], &status);
+      printf("\t\tproc: %d qattr: %f %f %f %f\n", myproc, qattr[0], qattr[1], qattr[2], qattr[3] );
     }
-  } else {
-    MPI_Irecv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[nprocs+myproc]);
-    MPI_Wait(&request[nprocs+myproc], &status);
-    printf("\t\tqattr: %f %f %f %f\n", qattr[0], qattr[1], qattr[2], qattr[3] );
+    MPI_Barrier(MPI_COMM_WORLD);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-
 
   /*
      plant pl;
