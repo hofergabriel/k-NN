@@ -17,6 +17,20 @@ typedef struct {
   char class[20];
 } plant;
 
+typedef struct {
+  float man;
+  float proc;
+} man_proc_pair;
+
+int cmp(const void * a, const void * b){
+  return ((float *)a)[0] > ((float *)b)[0];
+}
+
+
+/*int cmp(const void *a, const void *b){
+  return ((struct man_proc_pair *)a)->man < ((struct man_proc_pair *)b)->man;
+}*/
+
 /*******************************************************************//*
 @param d - plant attributes from data
 @param q - attributes from query
@@ -25,6 +39,8 @@ typedef struct {
 float dist(float d[], float q[]){
   return fabs(d[0]-q[0]) + fabs(d[1]-q[1]) + fabs(d[2]-q[2]) + fabs(d[3]-q[3]);
 }
+
+
 
 int main(int argc, char ** argv){
   /*******************************************************************/
@@ -153,18 +169,27 @@ int main(int argc, char ** argv){
       MPI_Isend(&man_proc, 2, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]); 
     }
     MPI_Barrier(MPI_COMM_WORLD);
+    /*******************************************************************//*
+      Sort all of the distances, print the first k.
+    *//*******************************************************************/
+    if(myproc==0){
+      qsort(arr, data_size, 2*sizeof(float), cmp);
+      for(int i=0;i<data_size;i++)
+        printf("after --> man: %f myproc: %f\n", arr[i][0], arr[i][1]);
+      MPI_Barrier(MPI_COMM_WORLD);
+
+      int K;
+      for(int i=0;i<K;i++){
+
+
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     
-    /*******************************************************************//*
-      Sort all of the distances
-    *//*******************************************************************/
-    for(int i=0;i<data_size;i++){
-      printf("man: %f myproc: %f\n", arr[i][0], arr[i][1]);
-    }
+
 
   }
-
-
 
 
   MPI_Finalize();
