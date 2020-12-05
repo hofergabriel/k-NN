@@ -177,11 +177,19 @@ int main(int argc, char ** argv){
       for(int i=0;i<data_size;i++)
         printf("after --> man: %f myproc: %f\n", arr[i][0], arr[i][1]);
       MPI_Barrier(MPI_COMM_WORLD);
-
+      /*** mode or regression? ***/
       int K;
       for(int i=0;i<K;i++){
+        if(argc<3) printf("no option specified\n");
+        if(argv[3]=="r"){
+        /* regression */
+          // use proc index to average first k vectors in data array
 
+        } else if(argv[3]=="m"){
+        /* mode */
+          // similarily, use proc index to find mode in first k vectors in data array
 
+        }
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);
