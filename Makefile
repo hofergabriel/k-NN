@@ -1,6 +1,4 @@
 default: 
-	mpicc k-NN.c -o k-NN -lm 
-	mpirun -np 6 ./k-NN data queries
 
 small_reg:
 	mpicc k-NN.c -o k-NN -lm 
@@ -16,3 +14,9 @@ iris:
 
 clean:
 	rm k-NN
+
+doc: 
+	pdflatex doc.tex
+	evince doc.pdf
+
+
