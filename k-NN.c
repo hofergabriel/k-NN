@@ -35,10 +35,6 @@ int cmp(const void * a, const void * b){
 }
 
 
-/*int cmp(const void *a, const void *b){
-  return ((struct man_proc_pair *)a)->man < ((struct man_proc_pair *)b)->man;
-}*/
-
 /*******************************************************************//*
 @param d - plant attributes from data
 @param q - attributes from query
@@ -49,21 +45,22 @@ float dist(float d[], float q[]){
 }
 
 
-
 int main(int argc, char ** argv){
   /*******************************************************************/
   /* 1. Initialization */
   /*******************************************************************/
+	printf("hello");
   int myproc, nprocs, len;
   MPI_Init(&argc, &argv);
+	printf("hello 2");
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
-  MPI_Request request[100];
+  MPI_Request request[1000];
   MPI_Status status;
 
   char *buf = NULL; 
   size_t leng; float a, b, c, d; char ch; char e[20];
-  plant data[100];
+  plant data[1000];
   int plant_idx=0;
   int data_size;
   int query_size;
@@ -110,7 +107,7 @@ int main(int argc, char ** argv){
    6. read queries from file and iterate through them.
   *//*******************************************************************/
   plant_idx=0;
-  plant query[100]; 
+  plant query[1000]; 
   if(myproc==0){
     FILE *fp2 = fopen(argv[2],"r");
     while(getline(&buf, &leng, fp2)>1){
@@ -171,7 +168,7 @@ int main(int argc, char ** argv){
     man_proc[0]=manhattan;
     man_proc[1]=(float)myproc;
   
-    float arr[100][2];
+    float arr[1000][2];
     if(myproc==0){ 
       for(int i=1;i<nprocs;i++){ 
         MPI_Irecv(&arr[i-1], 2, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]); 
@@ -209,9 +206,6 @@ int main(int argc, char ** argv){
 
   MPI_Finalize();
 }
-
-
-
 
 
 
