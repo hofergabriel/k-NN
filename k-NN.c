@@ -4,6 +4,14 @@ Date: December 7, 2020
 Course: CSC-410
 
 What is the difference between MPI_Barrier and MPI_Wait?
+
+important thing to remember -- don't do this: 
+
+if(proc==0){
+  MPI_Barrier(...)
+}
+--> understand what MPI_Barrier does 
+
 *//*******************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,8 +116,10 @@ int main(int argc, char ** argv){
     while(getline(&buf, &leng, fp2)>1){
       sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
       //printf("%f %f %f %f\n", a, b, c, d);
-      query[plant_idx].attr[0]=a; query[plant_idx].attr[1]=b;
-      query[plant_idx].attr[2]=c; query[plant_idx].attr[3]=d;
+      query[plant_idx].attr[0]=a; 
+      query[plant_idx].attr[1]=b;
+      query[plant_idx].attr[2]=c; 
+      query[plant_idx].attr[3]=d;
       plant_idx++;
     }
     query_size=plant_idx; // unique for query_size 
@@ -139,7 +149,7 @@ int main(int argc, char ** argv){
     } else {
       MPI_Irecv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[nprocs+myproc]);
       //MPI_Recv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
-      MPI_Wait(&request[nprocs+myproc], &status);
+      //MPI_Wait(&request[nprocs+myproc], &status); //CHANGED_THIS
       printf("\t\tproc: %d qattr: %f %f %f %f\n", myproc, qattr[0], qattr[1], qattr[2], qattr[3] );
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -152,6 +162,7 @@ int main(int argc, char ** argv){
       manhattan=dist(attr, qattr);
       printf("proc: %d manhattan: %f\n", myproc, manhattan);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
   
     /*******************************************************************//*
       Send man. dist. back to the root process 
@@ -176,7 +187,6 @@ int main(int argc, char ** argv){
       qsort(arr, data_size, 2*sizeof(float), cmp);
       for(int i=0;i<data_size;i++)
         printf("after --> man: %f myproc: %f\n", arr[i][0], arr[i][1]);
-      MPI_Barrier(MPI_COMM_WORLD);
       /*** mode or regression? ***/
       int K;
       for(int i=0;i<K;i++){
@@ -194,17 +204,11 @@ int main(int argc, char ** argv){
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
-    
-
-
   }
 
 
   MPI_Finalize();
 }
-
-
-
 
 
 
