@@ -12,6 +12,9 @@ if(proc==0){
 }
 --> understand what MPI_Barrier does 
 
+It takes like 10 seconds or so (machine dependent) to start 151 processes
+
+
 *//*******************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,14 +48,41 @@ float dist(float d[], float q[]){
 }
 
 
+/*******************************************************************//*
+Main's Local Variables
+-----------------------------------------------------------------------
+
+data_size - number of lines/records in the data file
+query_size - number of lines/records in the query file
+plant_idx - an iterator variable for traversing an array of plants
+
+fp - file pointer to the file we're reading from 
+buf - read a whole line/record from a file
+leng - integer representing the length of the string read in getline
+
+a - (float) the first field in a record 
+b - (float) the second field in a record
+c - (float) the third field in a record
+d - the fourth field in a record
+
+attr - used for sending/receiving plant attributes (from the data file)
+		to other processes.
+class - used for sending/receiving plant classes to other processes
+		from the data file.
+qattr - used for sending/receiving plant attributes (from the query file
+		to other processes.
+
+man_proc - pair of floats which maps manhattan distances to the index
+		of the record that corresponds to that manhattan distance.
+arr - array of pairs of floats containing all of the man_proc pairs.
+
+*//*******************************************************************/
 int main(int argc, char ** argv){
   /*******************************************************************/
   /* 1. Initialization */
   /*******************************************************************/
-	printf("hello");
   int myproc, nprocs, len;
   MPI_Init(&argc, &argv);
-	printf("hello 2");
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
   MPI_Request request[1000];
@@ -72,7 +102,6 @@ int main(int argc, char ** argv){
     FILE *fp = fopen(argv[1],"r");
     while(getline(&buf, &leng, fp)>0){
       sscanf(buf, "%f %[,] %f %[,] %f %[,] %f %[,] %s", &a, &ch, &b, &ch, &c, &ch, &d, &ch, e);
-      //printf("%f %f %f %f %s\n", a, b, c, d, e);
       data[plant_idx].attr[0]=a;
       data[plant_idx].attr[1]=b;
       data[plant_idx].attr[2]=c;
@@ -104,7 +133,7 @@ int main(int argc, char ** argv){
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************//*
-   6. read queries from file and iterate through them.
+			6. read queries from file and iterate through them.
   *//*******************************************************************/
   plant_idx=0;
   plant query[1000]; 
@@ -112,7 +141,6 @@ int main(int argc, char ** argv){
     FILE *fp2 = fopen(argv[2],"r");
     while(getline(&buf, &leng, fp2)>1){
       sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
-      //printf("%f %f %f %f\n", a, b, c, d);
       query[plant_idx].attr[0]=a; 
       query[plant_idx].attr[1]=b;
       query[plant_idx].attr[2]=c; 
@@ -139,15 +167,10 @@ int main(int argc, char ** argv){
   for(int j=0;j<query_size;j++){
     if(myproc==0){
       for(int i=1;i<nprocs;i++){
-        //printf("\t\tsend to: %d 2coll[i]: %f %f %f %f\n", i, query[j].attr[0], query[j].attr[1], query[j].attr[2], query[j].attr[3]);
         MPI_Isend(&query[j].attr, 4, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &request[i]);
-        //MPI_Wait(&request[i], &status);
       }
     } else {
       MPI_Irecv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[nprocs+myproc]);
-      //MPI_Recv(&qattr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
-      //MPI_Wait(&request[nprocs+myproc], &status); //CHANGED_THIS
-      printf("\t\tproc: %d qattr: %f %f %f %f\n", myproc, qattr[0], qattr[1], qattr[2], qattr[3] );
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -155,10 +178,7 @@ int main(int argc, char ** argv){
       For the current query:
     *//*******************************************************************/
     float manhattan=-1;
-    if(myproc>0) {
-      manhattan=dist(attr, qattr);
-      printf("proc: %d manhattan: %f\n", myproc, manhattan);
-    }
+    if(myproc>0) { manhattan=dist(attr, qattr); }
     MPI_Barrier(MPI_COMM_WORLD);
   
     /*******************************************************************//*
@@ -182,27 +202,46 @@ int main(int argc, char ** argv){
     *//*******************************************************************/
     if(myproc==0){
       qsort(arr, data_size, 2*sizeof(float), cmp);
+/*
       for(int i=0;i<data_size;i++)
         printf("after --> man: %f myproc: %f\n", arr[i][0], arr[i][1]);
+*/
       /*** mode or regression? ***/
-      int K;
-      for(int i=0;i<K;i++){
-        if(argc<3) printf("no option specified\n");
-        if(argv[3]=="r"){
+      int K=atoi(argv[3]);
+			float rattr[4]={0,0,0,0};
+
+			if(0==strcmp(argv[4],"r")){
         /* regression */
-          // use proc index to average first k vectors in data array
+				printf("REGRESSION\n");
+        // use proc index to average first k vectors in data array
+				for(int i=0;i<K;i++){
+ 					rattr[0]+=data[(int)arr[i][1]].attr[0]/(float)K;
+					rattr[1]+=data[(int)arr[i][1]].attr[1]/(float)K;
+					rattr[2]+=data[(int)arr[i][1]].attr[2]/(float)K;
+					rattr[3]+=data[(int)arr[i][1]].attr[3]/(float)K;
+      	}
+				printf("rattr: %f %f %f %f\n", rattr[0], rattr[1], rattr[2], rattr[3]);
+      } else if(0==strcmp(argv[4],"m")){
+				printf("MODE\n");
+				int Iris_virginica=0;
+				int Iris_versicolor=0;
+				int Iris_setosa=0;
+				for(int i=0;i<K;i++){
+					if(strcmp(data[(int)arr[i][1]].class,"Iris-virginica")==0)
+							Iris_virginica+=1;
+					if(strcmp(data[(int)arr[i][1]].class,"Iris-versicolor")==0)
+							Iris_versicolor+=1;
+					if(strcmp(data[(int)arr[i][1]].class,"Iris-setosa")==0)
+							Iris_setosa+=1;
+				}
+				printf("iris-virginica: %d\n", Iris_virginica);
+				printf("iris-versicolor: %d\n", Iris_versicolor);
+				printf("iris-setosa: %d\n", Iris_setosa);
 
-        } else if(argv[3]=="m"){
-        /* mode */
-          // similarily, use proc index to find mode in first k vectors in data array
-
-        }
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-
   }
-
 
   MPI_Finalize();
 }
