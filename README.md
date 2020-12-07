@@ -1,21 +1,10 @@
 # k-NN
 
-
-
-
-How should this problem be parallelized?
-
-we have an input file of data
-
-we have an intput file of queries. 
-
-only the root process reads from the queries file. 
-
-Make it work for any number of processes. 
-
-
-
-
+important things to remember -- don't do this: 
+if(proc==0){
+  MPI_Barrier(...)
+}
+understand what MPI_Barrier does  
 
 
 
