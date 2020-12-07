@@ -3,16 +3,8 @@ Author: Gabriel Hofer
 Date: December 7, 2020
 Course: CSC-410
 
-What is the difference between MPI_Barrier and MPI_Wait?
-
-important thing to remember -- don't do this: 
-if(proc==0){
-MPI_Barrier(...)
-}
 --> understand what MPI_Barrier does 
 It takes like 10 seconds or so (machine dependent) to start 151 processes
-
-
                                                                       
 *//*******************************************************************/
 #include <stdio.h>
