@@ -60,10 +60,14 @@ fp - file pointer to the file we're reading from
 buf - read a whole line/record from a file
 leng - integer representing the length of the string read in getline
 
-a - (float) the first field in a record 
-b - (float) the second field in a record
-c - (float) the third field in a record
+a - the first field in a record 
+b - the second field in a record
+c - the third field in a record
 d - the fourth field in a record
+e - string for plant class 
+
+data - array containing all of the records from the data file
+
 
 attr - used for sending/receiving plant attributes (from the data file)
 		to other processes.
@@ -123,9 +127,9 @@ int main(int argc, char ** argv){
   } else { MPI_Irecv(&attr, 4, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]); }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  /*******************************************************************/
-  /* 5. send plant class to all procs with rank greater than 0 */ 
-  /*******************************************************************/
+  /*******************************************************************//*
+		5. send plant class to all procs with rank greater than 0 
+  *//*******************************************************************/
   char class[20];
   if(myproc==0){ 
     for(int i=1;i<nprocs;i++){ MPI_Isend(&data[i-1].class, 20, MPI_CHAR, i, 0, MPI_COMM_WORLD, &request[i]); }
@@ -133,7 +137,7 @@ int main(int argc, char ** argv){
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************//*
-			6. read queries from file and iterate through them.
+		6. read queries from file and iterate through them.
   *//*******************************************************************/
   plant_idx=0;
   plant query[1000]; 
@@ -161,7 +165,7 @@ int main(int argc, char ** argv){
   MPI_Barrier(MPI_COMM_WORLD);
 
   /*******************************************************************/
-  /* 8. send query attr to all procs with rank greater than 0 */
+  /* 8. send query attrributes to all procs with rank greater than 0 */
   /*******************************************************************/
   float qattr[4];
   for(int j=0;j<query_size;j++){
@@ -175,14 +179,14 @@ int main(int argc, char ** argv){
     MPI_Barrier(MPI_COMM_WORLD);
 
     /*******************************************************************//*
-      For the current query:
+      For the current query, calculate manhattan distance between all vectors
     *//*******************************************************************/
     float manhattan=-1;
     if(myproc>0) { manhattan=dist(attr, qattr); }
     MPI_Barrier(MPI_COMM_WORLD);
   
     /*******************************************************************//*
-      Send man. dist. back to the root process 
+      Send manhattan distance back to the root process 
     *//*******************************************************************/
     float man_proc[2];
     man_proc[0]=manhattan;
@@ -202,27 +206,22 @@ int main(int argc, char ** argv){
     *//*******************************************************************/
     if(myproc==0){
       qsort(arr, data_size, 2*sizeof(float), cmp);
-/*
-      for(int i=0;i<data_size;i++)
-        printf("after --> man: %f myproc: %f\n", arr[i][0], arr[i][1]);
-*/
-      /*** mode or regression? ***/
       int K=atoi(argv[3]);
 			float rattr[4]={0,0,0,0};
 
 			if(0==strcmp(argv[4],"r")){
         /* regression */
 				printf("REGRESSION\n");
-        // use proc index to average first k vectors in data array
+				/* iterate through the closest K vectors and calculate the arith. mean of attributes */
 				for(int i=0;i<K;i++){
  					rattr[0]+=data[(int)arr[i][1]].attr[0]/(float)K;
 					rattr[1]+=data[(int)arr[i][1]].attr[1]/(float)K;
 					rattr[2]+=data[(int)arr[i][1]].attr[2]/(float)K;
 					rattr[3]+=data[(int)arr[i][1]].attr[3]/(float)K;
       	}
-				printf("rattr: %f %f %f %f\n", rattr[0], rattr[1], rattr[2], rattr[3]);
+				printf("MEAN: %f %f %f %f\n", rattr[0], rattr[1], rattr[2], rattr[3]);
       } else if(0==strcmp(argv[4],"m")){
-				printf("MODE\n");
+				/* iterate through the closest K vectors and count the frequency of each class of plant */
 				int Iris_virginica=0;
 				int Iris_versicolor=0;
 				int Iris_setosa=0;
@@ -234,15 +233,26 @@ int main(int argc, char ** argv){
 					if(strcmp(data[(int)arr[i][1]].class,"Iris-setosa")==0)
 							Iris_setosa+=1;
 				}
-				printf("iris-virginica: %d\n", Iris_virginica);
+				/* print the counts for the three plant classes */
+				printf("iris-virginica:  %d\n", Iris_virginica);
 				printf("iris-versicolor: %d\n", Iris_versicolor);
-				printf("iris-setosa: %d\n", Iris_setosa);
-
+				printf("iris-setosa:     %d\n", Iris_setosa);
+				/* find the mode by finding the class with the max cnt */
+				int mode_idx=-1;
+				if(Iris_virginica>=Iris_versicolor && Iris_virginica>=Iris_setosa)
+					mode_idx=0;
+				else if(Iris_versicolor>=Iris_virginica && Iris_versicolor>=Iris_setosa)
+					mode_idx=1;
+				else if(Iris_setosa>=Iris_virginica && Iris_setosa>=Iris_versicolor)
+					mode_idx=2;
+				/* print the mode */
+				if(mode_idx==0) printf("MODE: Iris-virginica\n");
+				if(mode_idx==1) printf("MODE: Iris-versicolor\n");
+				if(mode_idx==2) printf("MODE: Iris-setosa\n");
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
-
   MPI_Finalize();
 }
 
