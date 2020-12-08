@@ -9,6 +9,7 @@
 \usepackage{graphicx}
 
 \usepackage{tgschola}
+\usepackage{hyperref}
 %%%\usepackage{mathptmx}
 
 \usepackage[margin=1in]{geometry}
@@ -50,22 +51,48 @@
 \newpage
 \subsection*{Design}
 \subsubsection*{The data and task division}
-\subsubsection*{Description of local and global communication}
-\subsubsection*{The description of the larger combined tasks}
-\subsubsection*{The description of the mapping}
+One processor is assigned to each record or plant in the data set. The root process (process with rank 0) manages communication, divides the data to 
+different tasks, and prints the results. All of the other processors simply compute
+the manhattan distance between their assigned record from the training set and each query example.
 
+\subsubsection*{Description of local and global communication}
+Let $nprocs$ be the number of processors that are started.
+First, process 0 opens the file containing the training data set, reads each 
+record, and stores them into the array called $data$.
+Then, process 0 sends a record (4 attributes, class) to a unique processor.
+Similarily, process 0 read each record from the file containing the query examples
+and stores each record into an array called $query$. 
+Process 0 sends the same query to every process with rank $>0$. Then every process 
+computes the manhattan distance between their assigned record from the training
+set and the query example.
+Each process sends the manhattan distance back to the root process.
+
+\subsubsection*{The description of the larger combined tasks}
+The only larger combined task is the root process where 
+the other processes send the results from calculating the manhattan distance.
+
+\subsubsection*{The description of the mapping}
+The following function maps the index of the record in the $data$ array to the rank
+of a process tha the record is sent to:
+\[
+	f(data\_index) = rank+1
+\]
+
+%----------------------------------------------------------------------
+%----------------------------------------------------------------------
 \subsection*{Program Documentation}
 \subsubsection*{How to compile and run}
-Important specification: the number of processors (nprocs) must be equal to one more 
-than the number of records in the data-file due to how data is divided amongst tasks. 
-
+Important specification: the number of processors $nprocs$ must be equal to one more 
+than the number of records in the data-file. In other words, 
+$nprocs = 1 + (wc \ \ -l \ \ iris.data)$. 
+For example, iris.data has 150 lines (or records) of data. So, I run the program with 151 processes. This is because the root isn't assigned a record in the data set.
 Run the program using the Makefile in the root of the submission. 
 \begin{verbatim}
 $ make small_reg
 $ make small_mode
 \end{verbatim}
 
-This is the format for how command line parameters read by program:
+\noindent This is the format for how command line parameters read by the program:
 \begin{verbatim}
 mpirun -np  <nprocs>  <data-file>  <query-file>  k  <[r|m]>
 \end{verbatim}
@@ -73,6 +100,7 @@ mpirun -np  <nprocs>  <data-file>  <query-file>  k  <[r|m]>
 \subsubsection*{Implementation Description}
 Below are the steps in the k-NN algorithm (pseudo-code from the writeup). Code listings from the program are used to help explain how each step in the algorithm is implemented.
 
+%----------------------------------------------------------------------
 \lstset{
   basicstyle=\ttfamily,
   basicstyle = {\footnotesize\ttfamily},
@@ -81,11 +109,10 @@ Below are the steps in the k-NN algorithm (pseudo-code from the writeup). Code l
   breaklines=true,
   postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
 } 
-
 \begin{verbatim}
 a. Load the data
 \end{verbatim}
-The name of the data-file is read from argv[1]. records are read from the 
+\noindent The name of the data-file is read from argv[1]. records are read from the 
 data-file using getline until EOF. Fields in the records are expected to be 
 comma-separated. Therefore, we use sscanf for parsing the fields.
 \begin{lstlisting}[frame=single]
@@ -105,34 +132,36 @@ if(myproc==0){
 }
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
 \begin{verbatim}
-b. Initialize k to your chosen number of neighbors
+b. Initialize k to your chosen number of neighbors 
 \end{verbatim}
+\noindent K is passed as a command-line argument.
 \begin{lstlisting}[frame=single]
 int K=atoi(argv[3]);
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
 \begin{verbatim}
 c. For each example in the data
 	i. Calculate the distance between the query example and the current example from the data.
 \end{verbatim}
-This is the manhattan distance function.
+\noindent This is the manhattan distance function.
 \begin{lstlisting}[frame=single,language=C]
 float dist(float d[], float q[]){
   return fabs(d[0]-q[0]) + fabs(d[1]-q[1]) + fabs(d[2]-q[2]) + fabs(d[3]-q[3]);
 }
 \end{lstlisting} 
-Each process>0 calls dist to calculate the manhattan distance.
+Each process $>0$ calls $dist$ to calculate the manhattan distance.
 \begin{lstlisting}[frame=single,language=C]
 float manhattan=-1;
 if(myproc>0) { manhattan=dist(attr, qattr); }
 MPI_Barrier(MPI_COMM_WORLD);
 \end{lstlisting} 
 
-
-
+%----------------------------------------------------------------------
 \begin{verbatim}
-	ii. Add the distance and the index of the example to an ordered collection.
+ii. Add the distance and the index of the example to an ordered collection.
 \end{verbatim}
 Each process sends the distance back to the root process.
 \begin{lstlisting}[frame=single,language=C]
@@ -143,19 +172,24 @@ if(myproc==0){
 MPI_Barrier(MPI_COMM_WORLD);
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
 \begin{verbatim}
 d. Sort the ordered collection of distances and indices from smallest to largest (in ascending order) by the distances.
 \end{verbatim}
+qsort is called to sort pairs of data contained in arr. The first element in the pair is the manhattan distance. The second element is the index or label of the record in the data array.
 \begin{lstlisting}[frame=single]
 int cmp(const void * a, const void * b){ return ((float *)a)[0] > ((float *)b)[0]; }
 qsort(arr, data_size, 2*sizeof(float), cmp);
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
 \begin{verbatim}
 e. Pick the first k entries from the sorted collection
 f. Get the labels of the selected K entries
 g. If regression, return the mean of the k labels
 \end{verbatim}
+This section of code iterates through the k entries with minimal manhattan distance to 
+the query example and calculates the average for each of the 4 attributes. 
 \begin{lstlisting}[frame=single]
 if(0==strcmp(argv[4],"r")){
   /* regression */
@@ -170,9 +204,12 @@ if(0==strcmp(argv[4],"r")){
 } 
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
 \begin{verbatim}
 h. If classification, return the mode of the k labels
 \end{verbatim}
+This section of code iterates through the k entries with the minimal manhattan distance
+to the query example. The frequency of each type of plant is counted. A plant with the highest frequency is the mode.
 \begin{lstlisting}[frame=single]
 else if(0==strcmp(argv[4],"m")){
   /* iterate through the closest K vectors and count the frequency of each class of plant */
@@ -204,9 +241,33 @@ else if(0==strcmp(argv[4],"m")){
   if(mode_idx==1) printf("MODE: Iris-versicolor\n");
   if(mode_idx==2) printf("MODE: Iris-setosa\n");
 }
-
 \end{lstlisting} 
 
+%----------------------------------------------------------------------
+\subsubsection*{Expected format of the training set (input data).}
+
+The first command-line argument (argv[1]) passed to the program is the name of the file containing the training set.
+The iris.data file from \url{https://archive.ics.uci.edu/ml/machine-learning-databases/iris/} was used as the data-file for this program.
+Each line in the file contains a record of information corresponding to some plant's data.
+Each record in the file has the following format: 
+\begin{verbatim}
+sepal_length, sepal_width, petal_length, petal_width, class
+\end{verbatim}
+
+%----------------------------------------------------------------------
+\subsubsection*{Expected input of the query example}
+The second command-line argument (argv[2]) passed to the program is the name of the 
+file containing the query examples. The query examples have a similar format to the 
+format of the training set seen above. Each line has a single record with four fields, separated by commas.
+\begin{verbatim}
+sepal_length, sepal_width, petal_length, petal_width
+\end{verbatim}
+The only difference between records in the training set and the query set is that each plant in the query set doesn't have a class field.
+
+%\subsubsection*{Description of the functions}
+%----------------------------------------------------------------------
+\subsubsection*{An analysis of the performance enhancement obtained from the parallelization.}
+This program ran significancly slower to run in parallel. I'm guessing that this is because all processes were run on my PC which only has a few cores. 
 
 
 \end{document}
