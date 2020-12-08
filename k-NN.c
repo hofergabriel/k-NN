@@ -195,11 +195,11 @@ int main(int argc, char ** argv){
         int Iris_versicolor=0;
         int Iris_setosa=0;
         for(int i=0;i<K;i++){
-          if(strcmp(data[(int)arr[i][1]].class,"Iris-virginica")==0)
+          if(strcmp(data[(int)arr[i][1]-1].class,"Iris-virginica")==0)
             Iris_virginica+=1;
-          if(strcmp(data[(int)arr[i][1]].class,"Iris-versicolor")==0)
+          if(strcmp(data[(int)arr[i][1]-1].class,"Iris-versicolor")==0)
             Iris_versicolor+=1;
-          if(strcmp(data[(int)arr[i][1]].class,"Iris-setosa")==0)
+          if(strcmp(data[(int)arr[i][1]-1].class,"Iris-setosa")==0)
             Iris_setosa+=1;
         }
         /* print the counts for the three plant classes */
