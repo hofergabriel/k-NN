@@ -60,21 +60,22 @@ the manhattan distance between their assigned record from the training set and e
 Let $nprocs$ be the number of processors that are started.
 First, process 0 opens the file containing the training data set, reads each 
 record, and stores them into the array called $data$.
-Then, process 0 sends a record (4 attributes, class) to a unique processor.
-Similarily, process 0 read each record from the file containing the query examples
-and stores each record into an array called $query$. 
+Then, process 0 sends each record (4 attributes and a class) to a unique processor.
+Similarily, process 0 reads each record from the file containing the query examples
+and stores each record into an array called $query$. Each query is processed one-at-a-time.
 Process 0 sends the same query to every process with rank $>0$. Then every process 
-computes the manhattan distance between their assigned record from the training
-set and the query example.
-Each process sends the manhattan distance back to the root process.
+computes the manhattan distance between their uniquely assigned record from the training
+set and the common query example.
+Each process sends the manhattan distance back to the root process. 
+Then the next query is computed until there are no more queries.
 
 \subsubsection*{The description of the larger combined tasks}
-The only larger combined task is the root process where 
-the other processes send the results from calculating the manhattan distance.
+The only larger combined task is the root process which is where 
+the other processes send their results from calculating the manhattan distance.
 
 \subsubsection*{The description of the mapping}
 The following function maps the index of the record in the $data$ array to the rank
-of a process tha the record is sent to:
+of a process that the record is sent to:
 \[
 	f(data\_index) = rank+1
 \]
@@ -84,7 +85,7 @@ of a process tha the record is sent to:
 \subsection*{Program Documentation}
 \subsubsection*{How to compile and run}
 Important specification: the number of processors $nprocs$ that are 
-started must be equal to one more 
+started with \texttt{mpirun} or \texttt{mpiexec} must be equal to one more 
 than the number of records in the data-file. In other words, 
 $nprocs = 1 + (wc \ \ -l \ \ iris.data)$. 
 For example, iris.data has 150 lines (or records) of data. 
@@ -96,7 +97,7 @@ $ make iris_reg
 $ make iris_mode
 \end{verbatim}
 
-\noindent This is the format for how command line parameters read by the program:
+\noindent This is the format for how command line arguments are passed to the program:
 \begin{verbatim}
 $ mpirun -np  <nprocs>  <data-file>  <query-file>  k  [r|m]
 \end{verbatim}
@@ -118,8 +119,8 @@ the algorithm is implemented.
 \begin{verbatim}
 a. Load the data
 \end{verbatim}
-\noindent The name of the data-file is read from argv[1]. records are read from the 
-data-file using getline until EOF. Fields in the records are expected to be 
+\noindent The name of the file containing the data set is in argv[1]. 
+Records are read from the file with getline. Fields in the records are expected to be 
 comma-separated. Therefore, we use sscanf for parsing the fields.
 \begin{lstlisting}[frame=single]
 if(myproc==0){
@@ -173,16 +174,18 @@ Each process sends the distance back to the root process.
 \begin{lstlisting}[frame=single,language=C]
 float arr[1000][2];                                                                   
 if(myproc==0){ 
-  for(int i=1;i<nprocs;i++){ MPI_Irecv(&arr[i-1], 2, MPI_FLOAT, i, 0, MPI_COMM_WORLD,     &request[i]); }
+  for(int i=1;i<nprocs;i++){ 
+    MPI_Irecv(&arr[i-1], 2, MPI_FLOAT, i, 0, MPI_COMM_WORLD,     &request[i]); }
 } else { MPI_Isend(&man_proc, 2, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request[0]); }
 MPI_Barrier(MPI_COMM_WORLD);
 \end{lstlisting} 
 
 %----------------------------------------------------------------------
 \begin{verbatim}
-d. Sort the ordered collection of distances and indices from smallest to largest (in ascending order) by the distances.
+d. Sort the ordered collection of distances and indices from smallest to 
+   largest (in ascending order) by the distances.
 \end{verbatim}
-qsort is called to sort pairs of data contained in arr. The first element in the pair is the manhattan distance. The second element is the index or label of the record in the data array.
+qsort is called to sort pairs of data contained in \texttt{arr}. The first element in the pair is the manhattan distance. The second element is the index or label of the record in the data array.
 \begin{lstlisting}[frame=single]
 int cmp(const void * a, const void * b){ return ((float *)a)[0] > ((float *)b)[0]; }
 qsort(arr, data_size, 2*sizeof(float), cmp);
@@ -201,10 +204,10 @@ if(0==strcmp(argv[4],"r")){
   /* regression */
   /* iterate through the closest K vectors and calculate the arith. mean of attributes */
   for(int i=0;i<K;i++){
-    rattr[0]+=data[(int)arr[i][1]].attr[0]/(float)K;
-    rattr[1]+=data[(int)arr[i][1]].attr[1]/(float)K;
-    rattr[2]+=data[(int)arr[i][1]].attr[2]/(float)K;
-    rattr[3]+=data[(int)arr[i][1]].attr[3]/(float)K;
+    rattr[0]+=data[(int)arr[i][1]-1].attr[0]/(float)K;
+    rattr[1]+=data[(int)arr[i][1]-1].attr[1]/(float)K;
+    rattr[2]+=data[(int)arr[i][1]-1].attr[2]/(float)K;
+    rattr[3]+=data[(int)arr[i][1]-1].attr[3]/(float)K;
   }
   printf("MEAN: %f %f %f %f\n", rattr[0], rattr[1], rattr[2], rattr[3]);
 } 
@@ -216,6 +219,7 @@ h. If classification, return the mode of the k labels
 \end{verbatim}
 This section of code iterates through the k entries with the minimal manhattan distance
 to the query example. The frequency of each type of plant is counted. A plant with the highest frequency is the mode.
+If there are multiple plants with the highest frequency, one is choosen arbitrarily.
 \begin{lstlisting}[frame=single]
 else if(0==strcmp(argv[4],"m")){
   /* iterate through the closest K vectors and count the frequency of each class of plant */
@@ -223,11 +227,11 @@ else if(0==strcmp(argv[4],"m")){
   int Iris_versicolor=0;
   int Iris_setosa=0;
   for(int i=0;i<K;i++){
-    if(strcmp(data[(int)arr[i][1]].class,"Iris-virginica")==0)
+    if(strcmp(data[(int)arr[i][1]-1].class,"Iris-virginica")==0)
       Iris_virginica+=1;
-    if(strcmp(data[(int)arr[i][1]].class,"Iris-versicolor")==0)
+    if(strcmp(data[(int)arr[i][1]-1].class,"Iris-versicolor")==0)
       Iris_versicolor+=1;
-    if(strcmp(data[(int)arr[i][1]].class,"Iris-setosa")==0)
+    if(strcmp(data[(int)arr[i][1]-1].class,"Iris-setosa")==0)
       Iris_setosa+=1;
   }
   /* print the counts for the three plant classes */
@@ -274,7 +278,16 @@ in the query set is that each record in the query set doesn't have a class field
 %\subsubsection*{Description of the functions}
 %----------------------------------------------------------------------
 \subsubsection*{An analysis of the performance enhancement obtained from the parallelization.}
-This program ran slow on my personal machine. 
+This program ran slowly on my personal machine. 
+
+\subsection*{Testing}
+I wrote the k-NN algorithm in C++ without MPI in order to help me test the k-NN.c program.
+The testing program is in testing.cpp. I used it to test the correctness of k-NN.c (so,
+I hope testing.cpp is correct).
+
+There are four targets in the Makefile for running the testing.c on iris.data and small.data
+for either the regression or mode options.
+
 \end{document}
 
 
