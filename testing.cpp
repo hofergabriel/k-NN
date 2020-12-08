@@ -6,7 +6,6 @@ typedef struct {
   char class_[20];
 } plant;
 
-/* comparator for qsort */
 int cmp(const void * a, const void * b){
   return ((float *)a)[0] > ((float *)b)[0];
 }
@@ -14,7 +13,6 @@ int cmp(const void * a, const void * b){
 float dist(float d[], float q[]){
   return fabs(d[0]-q[0]) + fabs(d[1]-q[1]) + fabs(d[2]-q[2]) + fabs(d[3]-q[3]);
 }
-
 
 int main(int argc, char ** argv){
 
@@ -32,7 +30,7 @@ int main(int argc, char ** argv){
   FILE *fp = fopen(argv[1],"r");
   while(getline(&buf, &leng, fp)>0){
     sscanf(buf, "%f %[,] %f %[,] %f %[,] %f %[,] %s", &a, &ch, &b, &ch, &c, &ch, &d, &ch, e);
-		printf("%f %f %f %f %s\n", a, b, c, d, e);
+		//printf("%f %f %f %f %s\n", a, b, c, d, e);
     data[plant_idx].attr[0]=a;
     data[plant_idx].attr[1]=b;
     data[plant_idx].attr[2]=c;
@@ -51,7 +49,7 @@ int main(int argc, char ** argv){
   FILE *fp2 = fopen(argv[2],"r");
   while(getline(&buf, &leng, fp2)>1){
     sscanf(buf, "%f %[,] %f %[,] %f %[,] %f", &a, &ch, &b, &ch, &c, &ch, &d);
-		printf("%f %f %f %f\n", a, b, c, d);
+		//printf("%f %f %f %f\n", a, b, c, d);
     query[plant_idx].attr[0]=a; 
     query[plant_idx].attr[1]=b;
     query[plant_idx].attr[2]=c; 
@@ -71,14 +69,8 @@ int main(int argc, char ** argv){
       arr[i][0]=dist(data[i].attr, query[j].attr);
       arr[i][1]=i;
     }
-
     qsort(arr, data_size, 2*sizeof(float), cmp);
-		for(int i=0;i<data_size;i++){
-			printf("%f %f\n", arr[i][0], arr[i][1]);	
-		}
-
     float rattr[4]={0,0,0,0};
-
     if(0==strcmp(argv[4],"r")){
       /* regression */
       /* iterate through the closest K vectors and calculate the arith. mean of attributes */
@@ -122,7 +114,6 @@ int main(int argc, char ** argv){
       if(mode_idx==2) printf("MODE: Iris-setosa\n");
     }
   }
-
   return 0;
 }
 
