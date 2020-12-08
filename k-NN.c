@@ -83,6 +83,9 @@ int main(int argc, char ** argv){
     FILE *fp = fopen(argv[1],"r");
     while(getline(&buf, &leng, fp)>0){
       sscanf(buf, "%f %[,] %f %[,] %f %[,] %f %[,] %s", &a, &ch, &b, &ch, &c, &ch, &d, &ch, e);
+			/******/	
+			printf("%f %f %f %f %s\n", a, b, c, d, e);
+			/******/	
       data[plant_idx].attr[0]=a;
       data[plant_idx].attr[1]=b;
       data[plant_idx].attr[2]=c;
@@ -178,14 +181,25 @@ int main(int argc, char ** argv){
       int K=atoi(argv[3]);
       float rattr[4]={0,0,0,0};
 
+
+					/*********/
+					for(int g=0;g<data_size;g++){
+						printf("%f %f\n",arr[g][0], arr[g][1]);
+					}
+					printf("\n\n");
+					/*********/
+
+
+
+
       if(0==strcmp(argv[4],"r")){
         /* regression */
         /* iterate through the closest K vectors and calculate the arith. mean of attributes */
         for(int i=0;i<K;i++){
-          rattr[0]+=data[(int)arr[i][1]].attr[0]/(float)K;
-          rattr[1]+=data[(int)arr[i][1]].attr[1]/(float)K;
-          rattr[2]+=data[(int)arr[i][1]].attr[2]/(float)K;
-          rattr[3]+=data[(int)arr[i][1]].attr[3]/(float)K;
+          rattr[0]+=data[(int)arr[i][1]-1].attr[0]/(float)K;
+          rattr[1]+=data[(int)arr[i][1]-1].attr[1]/(float)K;
+          rattr[2]+=data[(int)arr[i][1]-1].attr[2]/(float)K;
+          rattr[3]+=data[(int)arr[i][1]-1].attr[3]/(float)K;
         }
 				/* print the mean of the closest k vectors */
         printf("MEAN: %f %f %f %f\n", rattr[0], rattr[1], rattr[2], rattr[3]);
