@@ -51,7 +51,8 @@
 \newpage
 \subsection*{Design}
 \subsubsection*{The data and task division}
-One processor is assigned to each record or plant in the data set. The root process (process with rank 0) manages communication, divides the data to 
+One processor is assigned to each record or plant in the data set. 
+The root process (process with rank 0) manages communication, divides the data to 
 different tasks, and prints the results. All of the other processors simply compute
 the manhattan distance between their assigned record from the training set and each query example.
 
@@ -82,10 +83,13 @@ of a process tha the record is sent to:
 %----------------------------------------------------------------------
 \subsection*{Program Documentation}
 \subsubsection*{How to compile and run}
-Important specification: the number of processors $nprocs$ must be equal to one more 
+Important specification: the number of processors $nprocs$ that are 
+started must be equal to one more 
 than the number of records in the data-file. In other words, 
 $nprocs = 1 + (wc \ \ -l \ \ iris.data)$. 
-For example, iris.data has 150 lines (or records) of data. So, I run the program with 151 processes. This is because the root isn't assigned a record in the data set.
+For example, iris.data has 150 lines (or records) of data. 
+So, I run the program with 151 processes. 
+This is because the root isn't assigned a record in the data set.
 Run the program using the Makefile in the root of the submission. 
 \begin{verbatim}
 $ make small_reg
@@ -94,11 +98,13 @@ $ make small_mode
 
 \noindent This is the format for how command line parameters read by the program:
 \begin{verbatim}
-mpirun -np  <nprocs>  <data-file>  <query-file>  k  <[r|m]>
+$ mpirun -np  <nprocs>  <data-file>  <query-file>  k  [r|m]
 \end{verbatim}
 
 \subsubsection*{Implementation Description}
-Below are the steps in the k-NN algorithm (pseudo-code from the writeup). Code listings from the program are used to help explain how each step in the algorithm is implemented.
+Below are the steps in the k-NN algorithm (pseudo-code from the writeup). 
+Code listings from the program are used to help explain how each step in 
+the algorithm is implemented.
 
 %----------------------------------------------------------------------
 \lstset{
@@ -247,7 +253,7 @@ else if(0==strcmp(argv[4],"m")){
 \subsubsection*{Expected format of the training set (input data).}
 
 The first command-line argument (argv[1]) passed to the program is the name of the file containing the training set.
-The iris.data file from \url{https://archive.ics.uci.edu/ml/machine-learning-databases/iris/} was used as the data-file for this program.
+The iris.data file from \\ \url{https://archive.ics.uci.edu/ml/machine-learning-databases/iris/} was used as the data-file for this program.
 Each line in the file contains a record of information corresponding to some plant's data.
 Each record in the file has the following format: 
 \begin{verbatim}
@@ -262,14 +268,13 @@ format of the training set seen above. Each line has a single record with four f
 \begin{verbatim}
 sepal_length, sepal_width, petal_length, petal_width
 \end{verbatim}
-The only difference between records in the training set and the query set is that each plant in the query set doesn't have a class field.
+The only difference between records in the training set and records 
+in the query set is that each record in the query set doesn't have a class field.
 
 %\subsubsection*{Description of the functions}
 %----------------------------------------------------------------------
 \subsubsection*{An analysis of the performance enhancement obtained from the parallelization.}
-This program ran significancly slower to run in parallel. I'm guessing that this is because all processes were run on my PC which only has a few cores. 
-
-
+This program ran slow on my personal machine. 
 \end{document}
 
 
